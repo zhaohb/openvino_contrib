@@ -24,15 +24,17 @@ typedef int (*callback_function)(const char*, void*);
 extern int goCallbackBridge(char* input, void* ptr);
 
 static ov_status_e ov_genai_llm_pipeline_create_npu_output_2048(const char* models_path,
+																  const char* models_cache_path,
 																  const char* device,
                                                                   ov_genai_llm_pipeline** pipe) {
-	return 	ov_genai_llm_pipeline_create(models_path, "NPU", 4, pipe, "MAX_PROMPT_LEN", "2048", "MIN_RESPONSE_LEN", "256");
+	return 	ov_genai_llm_pipeline_create(models_path, "NPU", 6, pipe, "MAX_PROMPT_LEN", "2048", "MIN_RESPONSE_LEN", "256", "CACHE_DIR", models_cache_path);
 }
 
 static ov_status_e ov_genai_llm_pipeline_create_cgo(const char* models_path,
+																  const char* models_cache_path,
 																  const char* device,
                                                                   ov_genai_llm_pipeline** pipe) {
-	return 	ov_genai_llm_pipeline_create(models_path, device, 0, pipe);
+	return 	ov_genai_llm_pipeline_create(models_path, device, 2, pipe, "CACHE_DIR", models_cache_path);
 }
 
 */
@@ -194,11 +196,18 @@ func CreatePipeline(modelsPath string, device string) *C.ov_genai_llm_pipeline {
 	defer C.free(unsafe.Pointer(cModelsPath))
 	defer C.free(unsafe.Pointer(cDevice))
 
+	// cache path
+	CachePath := filepath.Join(filepath.Dir(modelsPath), "openvino_cache")
+	cCachePath := C.CString(CachePath)
+	defer C.free(unsafe.Pointer(cCachePath))
+
+	log.Printf("Model cache: %s, Device: %s", CachePath, device)
+
 	// C.ov_genai_llm_pipeline_create(cModelsPath, cDevice, &pipeline)
 	if device == "NPU" {
-		C.ov_genai_llm_pipeline_create_npu_output_2048(cModelsPath, cDevice, &pipeline)
+		C.ov_genai_llm_pipeline_create_npu_output_2048(cModelsPath, cCachePath, cDevice, &pipeline)
 	} else {
-		C.ov_genai_llm_pipeline_create_cgo(cModelsPath, cDevice, &pipeline)
+		C.ov_genai_llm_pipeline_create_cgo(cModelsPath, cCachePath, cDevice, &pipeline)
 	}
 	return pipeline
 }

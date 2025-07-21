@@ -427,10 +427,24 @@ func (s *Server) loadModel(mpath string, mname string, device string) {
 				subdirs = append(subdirs, entry.Name())
 			}
 		}
+		// log.Printf("entries: %v", entries)
 
-		ov_model_path = filepath.Join(tempDir, subdirs[0])
+		tempDir := filepath.Join(tempDir, subdirs[0])
+		sub_entries, _ := os.ReadDir(tempDir)
+		var sub_subdirs []string
+		for _, entry := range sub_entries {
+			if entry.IsDir() {
+				sub_subdirs = append(sub_subdirs, entry.Name())
+			}
+		}
+		// log.Printf("sub entries: %v", sub_entries)
+
+		if strings.HasSuffix(sub_subdirs[0], "_cache") {
+			ov_model_path = filepath.Join(tempDir, sub_subdirs[1])
+		} else {
+			ov_model_path = filepath.Join(tempDir, sub_subdirs[0])
+		}
 	}
-
 	s.model = genai.CreatePipeline(ov_model_path, device)
 	log.Printf("The model had been load by GenAI, ov_model_path: %s , %s", ov_model_path, device)
 	s.status = ServerStatusReady
